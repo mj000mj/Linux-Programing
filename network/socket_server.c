@@ -1,80 +1,80 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <sys/socket.h>
-#include <errno.h>
-#include <arpa/inet.h>
+#include "wrap.h"
 
-#define TCP_PORT  9527
+#define TCP_PORT  9537
 
-void sys_err(char *err)
+void do_sigchild(int num)
 {
-    perror(err);
-    exit(EXIT_FAILURE);
+    while(waitpid(0, NULL, WNOHANG) > 0);
 }
 
 int main(int args, char *argv[])
 {
     int sfd, cfd, ret, i;
+    int pid;
     struct sockaddr_in ser_addr, cli_addr;
     socklen_t cli_addrlen;
     ssize_t rlen;
     char rbuf[BUFSIZ];
     char Client_IP[BUFSIZ];
-    memset(rbuf, 0, BUFSIZ);
+    struct sigaction newact;
 
+    newact.sa_handler = do_sigchild;
+    sigemptyset(&newact.sa_mask);
+    newact.sa_flags = 0;
+    sigaction(SIGCHLD, &newact, NULL);
+
+
+    memset(rbuf, 0, BUFSIZ);
+    cli_addrlen = sizeof(cli_addr);
     ser_addr.sin_family = AF_INET;
     ser_addr.sin_port = htons(TCP_PORT);
     ser_addr.sin_addr.s_addr = htonl(INADDR_ANY);
     
-    sfd = socket(AF_INET, SOCK_STREAM, 0);
-  
-    if(sfd == -1)
-    {
-        sys_err("socket error");
-    }
+    sfd = Socket(AF_INET, SOCK_STREAM, 0);
+    int opt = 1;
+    setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
-    ret = bind(sfd, (struct sockaddr *)&ser_addr, sizeof(ser_addr));
-    if(ret == -1)
-    {
-        sys_err("bind error");
-    }
+    bzero(&ser_addr, sizeof(ser_addr));   
+    Bind(sfd, (struct sockaddr *)&ser_addr, sizeof(ser_addr));
+    Listen(sfd, 5);
 
-    ret = listen(sfd, 5);
-    if(ret == -1)
-    {
-        sys_err("listen error");
-    }
-
-    cli_addrlen = sizeof(cli_addr);
-    cfd = accept(sfd, (struct sockaddr *)&cli_addr, &cli_addrlen);
-    if(cfd == -1)
-    {
-        sys_err("accept error");   
-    }
-
-    printf("Client Address: %s  Port: %d\n", inet_ntop(AF_INET, &cli_addr.sin_addr.s_addr, Client_IP, sizeof(Client_IP)),
-                                             ntohs(cli_addr.sin_port));
-    
     while(1)
     {
-        rlen = read(cfd, rbuf, BUFSIZ);
+        cli_addrlen = sizeof(cli_addr);
+        cfd = Accept(sfd, (struct sockaddr *)&cli_addr, &cli_addrlen);
+        printf("-------------------------%d\n", cfd);
+        pid = fork();
 
-        if(rlen > 0)
+        if (pid == 0)
         {
-            write(STDOUT_FILENO, rbuf, rlen);
-            for(i = 0; i < rlen; i++)
-                rbuf[i] = toupper(rbuf[i]);
-            write(cfd, rbuf, rlen);
+            Close(sfd);
+            while(1)
+            {
+                rlen = Read(cfd, rbuf, BUFSIZ);
+                if (rlen == 0)
+                {
+                    printf("the other side has been closed.\n");
+                    break;
+                }
+                printf("Client Address: %s  Port: %d\n", inet_ntop(AF_INET, &cli_addr.sin_addr.s_addr, Client_IP, sizeof(Client_IP)),
+                                                                                        ntohs(cli_addr.sin_port));
+
+                Write(STDOUT_FILENO, rbuf, rlen);
+                for(i = 0; i < rlen; i++)
+                    rbuf[i] = toupper(rbuf[i]);
+                Write(cfd, rbuf, rlen);
+            }
+            Close(cfd);
+            return 0;
         }
-        else if(rlen == -1)
+        else if (pid > 0)
         {
-           sys_err("read error");
+            Close(cfd);
+        }
+        else
+        {
+            Perr_exit("fork error");
         }
     }
-
-    close(sfd);
-    close(cfd);
     return 0;
 }
