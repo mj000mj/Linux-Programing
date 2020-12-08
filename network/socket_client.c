@@ -30,7 +30,7 @@ int main(int args, char *argv[])
     
     ser_addr.sin_family = AF_INET;
     ser_addr.sin_port = htons(TCP_PORT);
-    inet_pton(AF_INET, "127.0.0.1", &ser_addr.sin_addr.s_addr);
+    inet_pton(AF_INET, "192.168.106.129", &ser_addr.sin_addr);
 
     ret = connect(cfd, (struct sockaddr *)&ser_addr, sizeof(ser_addr));
     if(ret == -1)

@@ -1,16 +1,17 @@
 #include "wrap.h"
 
-#define TCP_PORT  9537
+#define TCP_PORT  9527
 
 void do_sigchild(int num)
 {
-    while(waitpid(0, NULL, WNOHANG) > 0);
+    while(waitpid(0, NULL, WNOHANG) > 0)
+        ;
 }
 
 int main(int args, char *argv[])
 {
     int sfd, cfd, ret, i;
-    int pid;
+    pid_t pid;
     struct sockaddr_in ser_addr, cli_addr;
     socklen_t cli_addrlen;
     ssize_t rlen;
@@ -25,18 +26,18 @@ int main(int args, char *argv[])
 
 
     memset(rbuf, 0, BUFSIZ);
+    int opt = 1;
+    setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+    bzero(&ser_addr, sizeof(ser_addr));  
     cli_addrlen = sizeof(cli_addr);
     ser_addr.sin_family = AF_INET;
     ser_addr.sin_port = htons(TCP_PORT);
     ser_addr.sin_addr.s_addr = htonl(INADDR_ANY);
     
     sfd = Socket(AF_INET, SOCK_STREAM, 0);
-    int opt = 1;
-    setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
-    bzero(&ser_addr, sizeof(ser_addr));   
     Bind(sfd, (struct sockaddr *)&ser_addr, sizeof(ser_addr));
-    Listen(sfd, 5);
+    Listen(sfd, 20);
 
     while(1)
     {
@@ -48,6 +49,7 @@ int main(int args, char *argv[])
         if (pid == 0)
         {
             Close(sfd);
+            printf("fork close socket of child success\n");
             while(1)
             {
                 rlen = Read(cfd, rbuf, BUFSIZ);
@@ -56,7 +58,7 @@ int main(int args, char *argv[])
                     printf("the other side has been closed.\n");
                     break;
                 }
-                printf("Client Address: %s  Port: %d\n", inet_ntop(AF_INET, &cli_addr.sin_addr.s_addr, Client_IP, sizeof(Client_IP)),
+                printf("Client Address: %s  Port: %d\n", inet_ntop(AF_INET, &cli_addr.sin_addr, Client_IP, sizeof(Client_IP)),
                                                                                         ntohs(cli_addr.sin_port));
 
                 Write(STDOUT_FILENO, rbuf, rlen);
