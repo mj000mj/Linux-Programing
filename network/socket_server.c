@@ -1,7 +1,8 @@
+/*此程序为socket套接字服务器端，多进程并发服务器*/
 #include "wrap.h"
-
+/*设置端口号*/
 #define TCP_PORT  9527
-
+/*子进程信号回调函数，用户回收子进程*/
 void do_sigchild(int num)
 {
     while(waitpid(0, NULL, WNOHANG) > 0)
