@@ -11,6 +11,14 @@
 #include <sys/wait.h>
 #include <ctype.h>
 #include <sys/types.h>
+#include <pthread.h>
+#include <sys/select.h>
+#include <poll.h>
+#include <sys/epoll.h>
+
+#ifndef MAX_LISTEN
+#define MAX_LISTEN 1024
+#endif
 
 void Perr_exit(char *err);
 
@@ -29,4 +37,5 @@ ssize_t Writen(int fd, const void *vptr, size_t n);
 ssize_t my_read(int fd, char *ptr);
 ssize_t Readline(int fd, void *vptr, size_t maxlen);
 
+int initTCPSocket(struct sockaddr_in *addr, short port);
 #endif
