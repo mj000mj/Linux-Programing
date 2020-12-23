@@ -123,3 +123,23 @@ ssize_t Readline(int fd, void *vptr, size_t maxlen)
 {
 	;
 }
+
+int initTCPSocket(struct sockaddr_in *addr, short port)
+{
+	int listenfd;
+	int opt;
+
+	listenfd = Socket(AF_INET, SOCK_STREAM, 0);
+	
+	addr->sin_family = AF_INET;
+	addr->sin_port = htons(port);
+	addr->sin_addr.s_addr = htonl(INADDR_ANY);
+	opt = 1;
+	setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, (const void *)&opt, sizeof(opt));
+
+	Bind(listenfd, (struct sockaddr *)addr, sizeof(struct sockaddr_in));
+
+	Listen(listenfd, MAX_LISTEN);
+
+	return listenfd;
+}
