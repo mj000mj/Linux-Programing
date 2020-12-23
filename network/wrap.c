@@ -68,7 +68,7 @@ int Listen(int s, int backlog)
 int Close(int fd)
 {
 	int ret;
-	ret = Close(fd);
+	ret = close(fd);
 	if (ret < 0)
 	{
 		Perr_exit("close error");
